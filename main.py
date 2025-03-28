@@ -13,7 +13,6 @@ line8 = "## .. .. .. .. .. .. .. ##\n"
 line9 = "## ## ## ## ## ## ## ## ##\n"
 grid = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8 + line9
 
-
 EstadoPin = namedtuple('EstadoPin','pinguins')
 
 class EstadoPinguins(EstadoPin):
@@ -130,7 +129,45 @@ class PenguinsPairs(Problem):
         Verifica se todos os pinguins estão emparelhados, ou seja, se os estado está vazio.
         """
         return state.pinguins == {}
-    
+
+
+    def try_move(self, penguin: str, coordinate: str, state):
+        step = limit = 0
+        penguin_line = state[penguin][0]
+        penguin_column = state[penguin][1]
+        
+        if coordinate == "E" or coordinate == "O":
+            step = 1 if coordinate == "E" else -1
+            limit = len(self.ice_map[0]) if coordinate == "E" else -1
+            
+            for col in range(penguin_column+step, limit, step):
+                cell = self.ice_map[penguin_line][col]
+                if cell == "()":
+                    return False
+                if cell == "##":
+                    # a coluna seguinte é um iceberg, logo o pinguim não vai se mexer
+                    if col == penguin_column+step:
+                        return False
+                    return True
+                if (penguin_line, col) in state.values():
+                    return True
+                
+        if coordinate == "N" or coordinate == "S":
+            step = 1 if coordinate == "S" else -1
+            limit = len(self.ice_map) if coordinate == "S" else -1
+            
+            for row in range(penguin_line+step, limit, step):
+                cell = self.ice_map[row][penguin_column]
+                if cell == "()":
+                    return False
+                if cell == "##":
+                    # a coluna seguinte é um iceberg, logo o pinguim não vai se mexer
+                    if row == penguin_line+step:
+                        return False
+                    return True
+                if (row, penguin_column) in state.values():
+                    return True
+
 
     def display (self, state):
         """
@@ -153,7 +190,7 @@ class PenguinsPairs(Problem):
                 output += ch + " "
             output += "\n"
         return output
-    
+
 
     def executa(self, state, actions_list, verbose=False):
         """Executa uma sequência de acções a partir do estado devolvendo o triplo formado pelo estado, 
@@ -186,43 +223,81 @@ class PenguinsPairs(Problem):
     
     def Npairings(self, node):
         
-        paired = []
+        newState = EstadoPinguins(dict(sorted(node.state.pinguins.items(), key=lambda item: item[0])) )
+        notPaired = list(newState.pinguins.keys())
         sortedState = dict(sorted(node.state.pinguins.items(), key=lambda item: item[0]))  #ver com o stor
         
         for penguin, coords in sortedState.items():
-            if penguin in paired:
+            if penguin not in notPaired:
                 continue
             for penguin2, coords2 in sortedState.items():
-                if penguin2 in paired or penguin == penguin2:
+                if penguin2 not in notPaired:
                     continue
                 if coords[0] != coords2[0] and coords[1] != coords2[1]:
                     continue
                 if coords[0] == coords2[0]:
                     if coords[1] > coords2[1] and self.slide(node.state, coords[0], coords[1], "O"):
-                        paired.append(penguin)
-                        paired.append(penguin2)
+                        newState = self.result(newState, (penguin, "O"))
+                        notPaired = (list(newState.pinguins.keys()))
                         break
                     if coords[1] < coords2[1] and self.slide(node.state, coords[0], coords[1], "E"):
-                        paired.append(penguin)
-                        paired.append(penguin2)
+                        newState = self.result(newState, (penguin, "E"))
+                        notPaired = (list(newState.pinguins.keys()))
                         break
                 if coords[1] == coords2[1]:
                     if coords[0] > coords2[0] and self.slide(node.state, coords[0], coords[1], "N"):
-                        paired.append(penguin)
-                        paired.append(penguin2)
+                        newState = self.result(newState, (penguin, "N"))
+                        notPaired = (list(newState.pinguins.keys()))
                         break
                     if coords[0] < coords2[0] and self.slide(node.state, coords[0], coords[1], "S"):
-                        paired.append(penguin)
-                        paired.append(penguin2)
+                        newState = self.result(newState, (penguin, "S"))
+                        notPaired = (list(newState.pinguins.keys()))
                         break
 
-        np = len(paired) // 2
-        nsp = len(sortedState.keys()) - len (paired)
+        np = (len(sortedState.keys()) - len(notPaired)) // 2
+        nsp =  len(notPaired)
 
         return np+nsp 
     
     
     def highestPairings(self, node):
-        
         pass
     
+
+# line1 = "() () () () () () () () ()\n"
+# line2 = "## 02 00 .. .. .. .. 01 ##\n"
+# line3 = "## .. .. .. .. .. .. .. ##\n"
+# line4 = "## .. .. .. .. .. .. .. ##\n"
+# line5 = "## .. .. () () () .. .. ##\n"
+# line6 = "## .. .. .. .. .. .. 03 ##\n"
+# line7 = "## .. .. .. .. .. .. .. ##\n"
+# line8 = "## .. .. .. .. .. .. .. ##\n"
+# line9 = "() () () () () () () () ()\n"
+# grid2 = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8 + line9
+
+# p = PenguinsPairs(grid2)
+# print(p.Npairings(Node(p.initial)))
+
+ 	
+
+# line1 = "() () () () () () () () ()\n"
+# line2 = "## .. .. 07 .. 01 .. .. ##\n"
+# line3 = "## .. .. .. .. 05 .. .. ##\n"
+# line4 = "## .. .. .. 09 .. .. .. ##\n"
+# line5 = "## .. .. () () () 02 08 ##\n"
+# line6 = "## .. .. .. .. 04 .. .. ##\n"
+# line7 = "## .. 06 03 .. .. .. .. ##\n"
+# line8 = "## .. 00 .. .. .. .. .. ##\n"
+# line9 = "() () () () () () () () ()\n"
+# grid3 = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8 + line9
+
+# # p = PenguinsPairs()
+# # print(p.Npairings(Node(p.initial)))
+
+# p = PenguinsPairs(grid3)
+# res,expanded = astar_search_plus_count(p,p.Npairings)
+# if res:
+#     print(res.solution())
+# else:
+#     print('No solution!')
+# print('expanded:',expanded)
